@@ -1,0 +1,148 @@
+
+================================================================================
+LANDSLIDE4SENSE — MEMBER 1 HANDOFF NOTES FOR MEMBER 2 (BACKEND)
+================================================================================
+
+WHAT IS IN THIS FOLDER
+-----------------------
+rf_landslide_model.joblib   — Trained Random Forest (scikit-learn)
+unet_landslide.pth          — Trained U-Net weights (PyTorch state_dict)
+channel_mean.npy            — Per-channel mean for normalization (17 values)
+channel_std.npy             — Per-channel std for normalization (17 values)
+normalization_stats.json    — Same as above but in JSON format (easier to read)
+
+PREPROCESSING PIPELINE (MUST DO THIS BEFORE CALLING EITHER MODEL)
+------------------------------------------------------------------
+When a user uploads a .h5 patch, your FastAPI /api/predict endpoint must:
+
+STEP 0 — Stage 0 Guardrail (reject bad files):
+    with h5py.File(uploaded_file, "r") as f:
+        img = f["img"][()]              # shape must be (128, 128, 14)
+    if img.shape != (128, 128, 14):
+        return {"error": "Invalid format"}
+    if img[:,:,9].mean() > 2.5:        # Band 10 Cirrus = index 9
+        return {"error": "Excessive cloud cover"}
+
+STEP 1 — Compute 3 spectral indices (14 → 17 channels):
+    eps  = 1e-6
+    ndvi = (img[:,:,7]  - img[:,:,3])  / (img[:,:,7]  + img[:,:,3]  + eps)
+    ndwi = (img[:,:,2]  - img[:,:,7])  / (img[:,:,2]  + img[:,:,7]  + eps)
+    bsi  = ((img[:,:,10] + img[:,:,3]) - (img[:,:,7] + img[:,:,1])) /            ((img[:,:,10] + img[:,:,3]) + (img[:,:,7] + img[:,:,1]) + eps)
+    import numpy as np
+    img17 = np.dstack([img, ndvi, ndwi, bsi]).astype(np.float32)
+    # img17 shape is now (128, 128, 17)
+
+STEP 2 — Normalize using channel_mean.npy and channel_std.npy:
+    mean  = np.load("channel_mean.npy")   # shape (17,)
+    std   = np.load("channel_std.npy")    # shape (17,)
+    img17 = (img17 - mean) / std
+    # img17 is now ready for both models
+
+HOW TO LOAD AND RUN THE RANDOM FOREST
+---------------------------------------
+    import joblib
+    rf = joblib.load("rf_landslide_model.joblib")
+
+    # Flatten: (128, 128, 17) → (16384, 17)
+    X = img17.reshape(-1, 17)
+
+    # Get predictions
+    pred_labels = rf.predict(X)           # shape (16384,) values 0 or 1
+    pred_probs  = rf.predict_proba(X)[:,1]  # shape (16384,) confidence
+
+    # Reshape back to mask
+    rf_mask = pred_labels.reshape(128, 128)
+    rf_conf = pred_probs.reshape(128, 128)
+
+HOW TO LOAD AND RUN U-NET
+---------------------------
+    import torch
+    import torch.nn as nn
+
+    # U-Net architecture (paste the full UNet class from Step 7 here)
+    model = UNet(in_channels=17)
+    model.load_state_dict(torch.load("unet_landslide.pth", map_location="cpu"))
+    model.eval()
+
+    # Prepare input: HWC → CHW → add batch dim
+    tensor = torch.from_numpy(img17.transpose(2,0,1)).unsqueeze(0)
+    # tensor shape: (1, 17, 128, 128)
+
+    with torch.no_grad():
+        logits = model(tensor)                        # (1, 1, 128, 128)
+        probs  = torch.sigmoid(logits).squeeze().numpy()  # (128, 128)
+        unet_mask = (probs > 0.5).astype("uint8")    # (128, 128)
+
+HOW TO CALCULATE RISK LEVEL (for /api/predict response)
+---------------------------------------------------------
+    landslide_pixels = int(unet_mask.sum())
+    total_pixels     = 128 * 128
+    landslide_area_m2 = landslide_pixels * 100  # each pixel = 10m x 10m = 100 m²
+    landslide_pct    = landslide_pixels / total_pixels * 100
+
+    if landslide_pct < 5:
+        risk_level = "Low"
+        risk_color = "Green"
+    elif landslide_pct < 20:
+        risk_level = "Moderate"
+        risk_color = "Yellow"
+    else:
+        risk_level = "High"
+        risk_color = "Red"
+
+HOW TO GENERATE TRUE COLOR RGB PREVIEW (for map overlay)
+----------------------------------------------------------
+    import base64, io
+    from PIL import Image
+
+    rgb = img17[:, :, [3, 2, 1]]              # bands 4,3,2 = R,G,B (before norm)
+    # Note: use the RAW img not img17 for RGB preview
+    rgb_raw = img[:, :, [3, 2, 1]]
+    rgb_norm = (rgb_raw - rgb_raw.min()) / (rgb_raw.max() - rgb_raw.min())
+    rgb_uint8 = (rgb_norm * 255).astype("uint8")
+    rgb_img = Image.fromarray(rgb_uint8, mode="RGB")
+
+    buffer = io.BytesIO()
+    rgb_img.save(buffer, format="PNG")
+    rgb_b64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
+    # Send rgb_b64 in the JSON response → Member 3 uses this for the map overlay
+
+HOW TO GENERATE MASK OVERLAY (for map overlay)
+-----------------------------------------------
+    # Create RGBA image: red = landslide, transparent = background
+    rgba = np.zeros((128, 128, 4), dtype=np.uint8)
+    rgba[unet_mask == 1] = [255, 0, 0, 180]    # red, semi-transparent
+    rgba[unet_mask == 0] = [0,   0, 0,   0]    # fully transparent
+
+    mask_img = Image.fromarray(rgba, mode="RGBA")
+    buffer2  = io.BytesIO()
+    mask_img.save(buffer2, format="PNG")
+    mask_b64 = base64.b64encode(buffer2.getvalue()).decode("utf-8")
+    # Send mask_b64 in the JSON response → Member 3 overlays this on Leaflet map
+
+EXPECTED /api/predict JSON RESPONSE SHAPE
+-------------------------------------------
+    {
+        "status"           : "success",
+        "risk_level"       : "High",
+        "risk_color"       : "Red",
+        "landslide_pixels" : 1234,
+        "landslide_area_m2": 123400,
+        "landslide_pct"    : 7.53,
+        "rf_confidence"    : 0.87,
+        "rgb_preview_b64"  : "<base64 PNG string>",
+        "mask_overlay_b64" : "<base64 RGBA PNG string>",
+        "patch_id"         : "user_upload_001"
+    }
+
+PYTHON DEPENDENCIES FOR MEMBER 2
+----------------------------------
+    pip install scikit-learn joblib torch numpy h5py pillow
+
+MODEL PERFORMANCE SUMMARY (from Step 8 evaluation)
+----------------------------------------------------
+    (Fill this in after Step 8 is complete)
+    Random Forest — F1: ___ | ROC-AUC: ___ | IoU: ___
+    U-Net         — F1: ___ | ROC-AUC: ___ | IoU: ___
+
+================================================================================

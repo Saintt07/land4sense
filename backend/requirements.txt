@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+python-multipart
+pymysql
+# needed by pymysql for MySQL 8's caching_sha2_password login
+cryptography
+python-dotenv
+h5py
+numpy
+scikit-learn==1.6.1
+joblib
+# Member 1's version; CPU build: pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cpu
+torch==2.14.1
+pillow
+pytest
+# starlette's TestClient needs httpx2 (plain httpx is deprecated there)
+httpx2
