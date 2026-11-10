@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
-from app import db, security
+from app import auth, db, security
 from app.main import MODELS_DIR, app
 from app.services.inference import load_rf, load_unet
 from app.services.preprocess import load_stats
@@ -58,7 +58,13 @@ def fake():
         yield conn
 
     app.dependency_overrides[db.get_db] = _get_db
-    yield TestClient(app), conn  # no `with`: lifespan (model load) doesn't run
+    app.dependency_overrides[auth.get_current_user] = lambda: {
+        "user_id": 1,
+        "email": "test@example.com",
+        "created_at": None,
+    }
+
+    yield TestClient(app), conn
     app.dependency_overrides.clear()
 
 

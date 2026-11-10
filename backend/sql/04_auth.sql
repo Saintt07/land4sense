@@ -1,0 +1,13 @@
+USE landslide4sense;
+
+CREATE TABLE IF NOT EXISTS users (
+    user_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+GRANT SELECT, INSERT ON landslide4sense.users
+TO 'l4s_app'@'localhost';
+
+FLUSH PRIVILEGES;

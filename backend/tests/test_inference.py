@@ -1,3 +1,4 @@
+
 from pathlib import Path
 
 import numpy as np
@@ -41,6 +42,7 @@ def test_rf_confidence_mean_over_all_pixels():
     (15, None, ("Moderate", "#F39C12")),
     (150, None, ("Moderate", "#F39C12")),
     (151, None, ("High", "#E74C3C")),
+    (245, None, ("High", "#E74C3C")),
     (16384, None, ("High", "#E74C3C")),
     (16384, "Metro Manila", ("Low", "#2ECC71")),
     (151, "Benguet", ("High", "#E74C3C")),
@@ -51,7 +53,21 @@ def test_risk_thresholds(pixels, region, expected):
 
 def test_risk_stats():
     mask = np.zeros((128, 128), np.uint8)
-    mask.ravel()[:820] = 1  # 820 px > 150 → High (was Moderate under the old 5 % rule)
-    assert risk_stats(mask) == {"landslide_pixels": 820, "landslide_area_m2": 82000,
-                                "landslide_pct": 5.0, "risk_level": "High", "risk_color": "#E74C3C"}
+
+    # 150 pixels = Moderate
+    mask.ravel()[:150] = 1
+    assert risk_stats(mask) == {
+        "landslide_pixels": 150,
+        "landslide_area_m2": 15000,
+        "landslide_pct": 0.92,
+        "risk_level": "Moderate",
+        "risk_color": "#F39C12",
+    }
+
+    # 820 pixels = High
+    mask.ravel()[:] = 0
+    mask.ravel()[:820] = 1
+    assert risk_stats(mask)["risk_level"] == "High"
+
+    # Metro Manila exception
     assert risk_stats(mask, "Metro Manila")["risk_level"] == "Low"

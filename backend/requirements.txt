@@ -15,3 +15,5 @@ pillow
 pytest
 # starlette's TestClient needs httpx2 (plain httpx is deprecated there)
 httpx2
+pwdlib[argon2]
+PyJWT

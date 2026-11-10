@@ -1,6 +1,10 @@
 *.joblib
 *.pth
 *.npy
+
 # Member 1's raw deliverables (~4 GB of .h5 patches); test fixtures live in backend/tests/fixtures/
 handoff_member2/demo_pipeline-*/
 handoff_member2/sample_patches/
+
+# IDE settings
+.idea/

@@ -2,7 +2,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 
-from app import db, security
+from app import auth, db, security
 from app.services.detections import log_detection
 from app.services.imaging import mask_overlay_b64, rgb_preview_b64
 from app.services.inference import rf_confidence, risk_stats, run_rf, run_unet
@@ -13,7 +13,13 @@ MAX_BYTES = 5 * 1024 * 1024
 router = APIRouter()
 
 
-@router.post("/api/predict", dependencies=[Depends(security.rate_limit)])
+@router.post(
+    "/api/predict",
+    dependencies=[
+        Depends(security.rate_limit),
+        Depends(auth.get_current_user),
+    ],
+)
 def predict(
     request: Request,
     file: UploadFile = File(...),
@@ -26,10 +32,14 @@ def predict(
     data = file.file.read(MAX_BYTES + 1)
     if len(data) > MAX_BYTES:
         raise HTTPException(413, "File too large: max 5 MB")
+
     try:
         img = load_patch(data)
     except ValueError as e:
         raise HTTPException(400, str(e))
+
+    if not getattr(request.app.state, "models_loaded", False):
+        raise HTTPException(503, "Prediction models are not available")
 
     state = request.app.state
     img17 = add_indices(img)

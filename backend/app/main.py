@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 import logging
 
 from app import config, db
-from app.routers import predict
+from app.routers import auth, predict
 from app.services.inference import load_rf, load_unet
 from app.services.preprocess import load_stats
 
@@ -18,13 +18,24 @@ log = logging.getLogger(__name__)
 MODELS_DIR = Path(__file__).resolve().parents[1] / "models"
 
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # load once; a missing model file fails startup loudly rather than at first request
-    app.state.mean, app.state.std = load_stats(MODELS_DIR)
-    app.state.rf = load_rf(MODELS_DIR)
-    app.state.unet = load_unet(MODELS_DIR)
+    app.state.models_loaded = False
+
+    try:
+        app.state.mean, app.state.std = load_stats(MODELS_DIR)
+        app.state.rf = load_rf(MODELS_DIR)
+        app.state.unet = load_unet(MODELS_DIR)
+
+        app.state.models_loaded = True
+        log.info("Models loaded successfully")
+
+    except FileNotFoundError as e:
+        log.warning("Model files missing. Prediction is disabled: %s", e)
+
     yield
+
 
 
 app = FastAPI(title="Landslide4Sense API", lifespan=lifespan)
@@ -50,6 +61,7 @@ async def validation_error(request: Request, exc: RequestValidationError):
     return JSONResponse({"status": "error", "error": f"{e['loc'][-1]}: {e['msg']}"}, status_code=400)
 
 
+app.include_router(auth.router)
 app.include_router(predict.router)
 
 

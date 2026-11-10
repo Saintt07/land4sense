@@ -1,3 +1,4 @@
+
 """Model inference (RF + U-Net) + risk logic (Member 1's recipe)."""
 from pathlib import Path
 
@@ -47,11 +48,9 @@ def rf_confidence(rf_conf: np.ndarray) -> float:
 
 
 def risk_level(pixels: int, region: str | None = None) -> tuple[str, str]:
-    """Pixel-count thresholds (Member 1, matches the public GeoJSON).
-    Not % of patch: 5 % = 819 px = 8.2 ha, so real scars (0.2–2 ha) all read Low."""
-    if region == "Metro Manila":  # flat urban terrain: always Low
+    if region == "Metro Manila":
         return "Low", "#2ECC71"
-    if pixels > 150:
+    if pixels >= 151:
         return "High", "#E74C3C"
     if pixels >= 15:
         return "Moderate", "#F39C12"
@@ -62,6 +61,7 @@ def risk_stats(mask: np.ndarray, region: str | None = None) -> dict:
     pixels = int(mask.sum())
     pct = pixels / mask.size * 100
     level, color = risk_level(pixels, region)
+
     return {
         "landslide_pixels": pixels,
         "landslide_area_m2": pixels * PIXEL_AREA_M2,
