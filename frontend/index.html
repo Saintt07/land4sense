@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1e4936">
+  <title>Landslide4Sense | Hazard Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#"><span class="logo">L4</span><span>Landslide<span class="green">4</span>Sense</span></a>
+    <div class="top-status"><span class="status-dot"></span> PRE-COMPUTED PREDICTIONS</div>
+    <button class="panel-toggle" id="panelToggle" type="button" aria-label="Collapse side panel" title="Collapse side panel">›</button>
+  </header>
+
+  <main class="app">
+    <div id="map" aria-label="Interactive landslide hazard map"></div>
+
+    <aside class="side-panel" id="sidePanel">
+      <div class="panel-scroll">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">LANDSLIDE MONITORING</p>
+            <h1>Hazard Map</h1>
+          </div>
+          <span class="data-pill"><i></i> Model output</span>
+        </div>
+
+        <label class="field-label" for="areaFilter">Select covered area</label>
+        <select id="areaFilter">
+          <option value="All">All available areas</option>
+          <option value="Benguet">Benguet</option>
+          <option value="Mountain Province">Mountain Province</option>
+          <option value="Metro Manila">Metro Manila</option>
+          <option value="Aurora">Aurora</option>
+        </select>
+
+        <form id="searchForm" class="search-form">
+          <label class="field-label" for="searchInput">Search an area</label>
+          <div class="search-row">
+            <input id="searchInput" type="search" placeholder="e.g. Benguet, Aurora">
+            <button type="submit" aria-label="Search">⌕</button>
+          </div>
+          <p class="help-text">Search currently supports the four areas in this test file.</p>
+        </form>
+
+        <section class="section">
+          <div class="section-title"><h2>Hazard legend</h2><span>Risk level</span></div>
+          <div class="legend-list">
+            <label class="legend-item"><input type="checkbox" class="risk-filter" value="Low" checked><span class="swatch low"></span><span>Low</span><b id="lowCount">—</b></label>
+            <label class="legend-item"><input type="checkbox" class="risk-filter" value="Moderate" checked><span class="swatch moderate"></span><span>Moderate</span><b id="moderateCount">—</b></label>
+            <label class="legend-item"><input type="checkbox" class="risk-filter" value="High" checked><span class="swatch high"></span><span>High</span><b id="highCount">—</b></label>
+          </div>
+          <label class="opacity-control" for="opacityRange"><span>Overlay opacity</span><output id="opacityValue">65%</output></label>
+          <input id="opacityRange" type="range" min="10" max="100" value="65">
+        </section>
+
+        <section class="section summary-section">
+          <div class="section-title"><h2>Dataset overview</h2><span id="areaLabel">All areas</span></div>
+          <div class="metric"><span>Mapped patches</span><strong id="totalCount">Loading…</strong></div>
+          <div class="metric"><span>High hazard patches</span><strong id="highMetric">—</strong></div>
+          <div class="metric"><span>Areas represented</span><strong id="areaCount">—</strong></div>
+        </section>
+
+        <section class="section selected-section">
+          <div class="section-title"><h2>Selected map feature</h2><span class="selection-hint">Click a polygon</span></div>
+          <div id="featureDetails" class="feature-empty">
+            <span class="pin-icon">⌖</span>
+            <strong>No feature selected</strong>
+            <p>Select a colored polygon on the map to see its information here.</p>
+          </div>
+          <div id="featureInfo" class="feature-info" hidden>
+            <div class="risk-heading"><span id="featureSwatch" class="swatch"></span><strong id="featureRisk">—</strong></div>
+            <div class="detail-row"><span>Area</span><b id="featureArea">—</b></div>
+            <div class="detail-row"><span>Affected area</span><b id="featureAffectedArea">—</b></div>
+            <div class="detail-row"><span>Landslide pixels</span><b id="featurePixels">—</b></div>
+            <div class="detail-row"><span>Patch coverage</span><b id="featurePct">—</b></div>
+            <div class="detail-row"><span>RF confidence</span><b id="featureConfidence">—</b></div>
+            <div class="detail-row"><span>Coordinates</span><b id="featureCoords">—</b></div>
+            <div class="detail-row"><span>Tile</span><b id="featureTile">—</b></div>
+          </div>
+        </section>
+
+        <section class="notice">
+          <strong>Important data note</strong>
+          <p>This map displays pre-computed model predictions, not live monitoring or an official warning. Current dataset coverage: Benguet, Mountain Province, Metro Manila, and Aurora. Predictions should not be used alone for emergency decisions.</p>
+        </section>
+        <div class="panel-actions">
+          <button id="resetView" class="secondary-button" type="button">Reset map view</button>
+          <button id="locateMe" class="secondary-button" type="button">◎ My location</button>
+        </div>
+      </div>
+      <div class="panel-footer">Landslide4Sense · Student project prototype</div>
+    </aside>
+  </main>
+
+  <div id="loadMessage" class="load-message">Loading hazard dataset…</div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

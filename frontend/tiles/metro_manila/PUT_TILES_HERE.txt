@@ -1,0 +1,3 @@
+Copy the CONTENTS of your local tiles_fixed folder into this folder.
+Expected structure: tiles/metro_manila/8/x/y.png, tiles/metro_manila/9/x/y.png, etc.
+Keep the zoom-level folders (8 through 15) and their x/y subfolders.
