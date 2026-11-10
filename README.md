@@ -203,6 +203,38 @@ Classification follows the project's current pixel-count rules. The current impl
 
 The frontend requires its local tile images to display the satellite map background. These are separate from the original satellite TIFF files used during data preparation.
 
+## How to Run the Frontend
+
+1. Make sure Python 3 is installed on your computer.
+2. Open Command Prompt or PowerShell.
+3. Navigate to the frontend directory:
+
+   ```bash
+   cd frontend
+   ```
+
+   If you're starting from the repository's root directory, this command will take you into the frontend folder.
+
+4. Start the local development server:
+
+   ```bash
+   python -m http.server 5500
+   ```
+
+5. Open your web browser and visit:
+
+   ```text
+   http://localhost:5500/
+   ```
+
+6. The Land4Sense frontend should now be accessible through your browser.
+
+**Notes:**
+- Keep the terminal running while using the frontend.
+- Make sure the `tiles` folder remains in its expected location so the satellite map tiles can load properly.
+- An internet connection may be required if the frontend uses external libraries or map resources through a CDN.
+- If the frontend communicates with the backend API, make sure the backend is running and the API address is correctly configured.
+
 Large TIFF datasets, trained model files, and other supporting data should only be included in the repository if they are necessary for the application to run and are appropriate to distribute.
 
 If certain datasets or model files are not included, provide instructions on how users can obtain or configure them separately.
