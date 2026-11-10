@@ -1,5 +1,11 @@
 .env
-models/
+# Ignore model files by default
+models/*
+
+# Include the smaller required model files
+!models/channel_mean.npy
+!models/channel_std.npy
+!models/unet_landslide.pth
 venv/
 __pycache__/
 .pytest_cache/
