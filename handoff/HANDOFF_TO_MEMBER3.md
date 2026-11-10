@@ -138,7 +138,7 @@ Real values from `sample_patch_2.h5` (full file: `sample_response_moderate.json`
 | Key | Type | Meaning | How to use it |
 |---|---|---|---|
 | `status` | `"success"` | Always `"success"` on 200. | Branch on this. |
-| `risk_level` | `"Low"` \| `"Moderate"` \| `"High"` | Based on `landslide_pct` (table below). | Badge text. |
+| `risk_level` | `"Low"` \| `"Moderate"` \| `"High"` | Based on `landslide_pixels` (table below), same rule as the public GeoJSON. | Badge text. |
 | `risk_color` | hex string | `#2ECC71` (Low, green) · `#F39C12` (Moderate, orange) · `#E74C3C` (High, red) | Badge or marker colour, legend. ⚠️ It's a **hex code**, not the word "Green/Yellow/Red" from Member 1's old notes. |
 | `landslide_pixels` | integer, 0–16384 | Pixels the U-Net marked as landslide. | Detail text. |
 | `landslide_area_m2` | integer | `landslide_pixels × 100` (each pixel is 10 m × 10 m). | Show as m², or ÷10 000 for hectares, or ÷1 000 000 for km². |
@@ -150,11 +150,13 @@ Real values from `sample_patch_2.h5` (full file: `sample_response_moderate.json`
 
 **Risk thresholds** (from Member 1):
 
-| `landslide_pct` | `risk_level` | `risk_color` |
+| `landslide_pixels` | `risk_level` | `risk_color` |
 |---|---|---|
-| < 5 % | Low | `#2ECC71` |
-| 5 % – < 20 % | Moderate | `#F39C12` |
-| ≥ 20 % | High | `#E74C3C` |
+| < 15 | Low | `#2ECC71` |
+| 15 – 150 | Moderate | `#F39C12` |
+| > 150 | High | `#E74C3C` |
+
+`region_name` = `"Metro Manila"` is always Low. The old 5 % / 20 % rule was dropped because it labelled all 21,689 GeoJSON patches Low.
 
 **Facts you'll need:**
 - One patch = 128 × 128 pixels × 10 m = **1.28 km × 1.28 km** on the ground (1.6384 km²).
@@ -356,7 +358,7 @@ if (import.meta.env.VITE_USE_MOCK === 'true') {
   return new Promise((resolve) => setTimeout(() => resolve(mockResult), 600)); // fake latency
 }
 ```
-Copy `handoff/member3/sample_response_moderate.json` into `src/mocks/`. To preview **High** risk styling, make a copy and change `risk_level` to `"High"`, `risk_color` to `"#E74C3C"` and `landslide_pct` to e.g. `23.5`. **No real sample file produces High**, so this is the only way to show it. (Images stay the same; that's fine for UI work.)
+Copy `handoff/member3/sample_response_moderate.json` into `src/mocks/`. To preview **High** risk styling, make a copy and change `risk_level` to `"High"`, `risk_color` to `"#E74C3C"` and `landslide_pct` to e.g. `23.5`. (`sample_patch_1.h5` / `_2.h5` now return High from the real API.) (Images stay the same; that's fine for UI work.)
 
 ---
 
@@ -366,9 +368,9 @@ Results captured from the real API on 2026-11-10:
 
 | File | Result | Known location (use as the pin) |
 |---|---|---|
-| `handoff/member3/sample_patches/sample_patch_2.h5` | ✅ **Moderate**, 5.73 %, 938 px, red mask visible | unknown, pick any point (e.g. Benguet 16.40, 120.60) |
-| `handoff/member3/sample_patches/sample_patch_1.h5` | ✅ Low, 2.33 %, 381 px | unknown |
-| `handoff/member3/sample_patches/sample_patch_5.h5` | ✅ Low, 0.65 %, 107 px | unknown |
+| `handoff/member3/sample_patches/sample_patch_2.h5` | ✅ **High**, 5.73 %, 938 px, red mask visible | unknown, pick any point (e.g. Benguet 16.40, 120.60) |
+| `handoff/member3/sample_patches/sample_patch_1.h5` | ✅ High, 2.33 %, 381 px | unknown |
+| `handoff/member3/sample_patches/sample_patch_5.h5` | ✅ Moderate, 0.65 %, 107 px | unknown |
 | `backend/tests/fixtures/unet/luzon_0150_r1920_c2304.h5` | ✅ Low, 0 %, **empty mask** | Aurora · **15.731791, 121.632743** |
 | `backend/tests/fixtures/unet/luzon_0155_r1536_c2048.h5` | ✅ Low, 0 %, empty mask | Mountain Province · **17.116275, 121.609746** |
 | `handoff/member3/sample_patches/invalid_processed_patch.h5` | ❌ 400 `Invalid file: missing 'img' dataset` | — |

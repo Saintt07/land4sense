@@ -36,7 +36,7 @@ def predict(
     img17_norm = normalize(img17, state.mean, state.std)
     _, rf_probs = run_rf(state.rf, img17_norm)
     unet_mask, _ = run_unet(state.unet, img17_norm)
-    stats = risk_stats(unet_mask)
+    stats = risk_stats(unet_mask, region_name)
     rf_conf = rf_confidence(rf_probs)
     patch_id = f"upload_{uuid4().hex[:8]}"
 

@@ -46,18 +46,22 @@ def rf_confidence(rf_conf: np.ndarray) -> float:
     return float(rf_conf.mean())
 
 
-def risk_level(pct: float) -> tuple[str, str]:
-    if pct < 5:
+def risk_level(pixels: int, region: str | None = None) -> tuple[str, str]:
+    """Pixel-count thresholds (Member 1, matches the public GeoJSON).
+    Not % of patch: 5 % = 819 px = 8.2 ha, so real scars (0.2–2 ha) all read Low."""
+    if region == "Metro Manila":  # flat urban terrain: always Low
         return "Low", "#2ECC71"
-    if pct < 20:
+    if pixels > 150:
+        return "High", "#E74C3C"
+    if pixels >= 15:
         return "Moderate", "#F39C12"
-    return "High", "#E74C3C"
+    return "Low", "#2ECC71"
 
 
-def risk_stats(mask: np.ndarray) -> dict:
+def risk_stats(mask: np.ndarray, region: str | None = None) -> dict:
     pixels = int(mask.sum())
     pct = pixels / mask.size * 100
-    level, color = risk_level(pct)
+    level, color = risk_level(pixels, region)
     return {
         "landslide_pixels": pixels,
         "landslide_area_m2": pixels * PIXEL_AREA_M2,

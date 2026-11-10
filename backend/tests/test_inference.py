@@ -35,20 +35,23 @@ def test_rf_confidence_mean_over_all_pixels():
     assert rf_confidence(conf) == pytest.approx((0.1 * 16382 + 1.4) / 16384)
 
 
-@pytest.mark.parametrize("pct,expected", [
-    (0, ("Low", "#2ECC71")),
-    (4.99, ("Low", "#2ECC71")),
-    (5, ("Moderate", "#F39C12")),
-    (19.99, ("Moderate", "#F39C12")),
-    (20, ("High", "#E74C3C")),
-    (100, ("High", "#E74C3C")),
+@pytest.mark.parametrize("pixels,region,expected", [
+    (0, None, ("Low", "#2ECC71")),
+    (14, None, ("Low", "#2ECC71")),
+    (15, None, ("Moderate", "#F39C12")),
+    (150, None, ("Moderate", "#F39C12")),
+    (151, None, ("High", "#E74C3C")),
+    (16384, None, ("High", "#E74C3C")),
+    (16384, "Metro Manila", ("Low", "#2ECC71")),
+    (151, "Benguet", ("High", "#E74C3C")),
 ])
-def test_risk_thresholds(pct, expected):
-    assert risk_level(pct) == expected
+def test_risk_thresholds(pixels, region, expected):
+    assert risk_level(pixels, region) == expected
 
 
 def test_risk_stats():
     mask = np.zeros((128, 128), np.uint8)
-    mask.ravel()[:820] = 1  # 820/16384 = 5.0049 % → Moderate
+    mask.ravel()[:820] = 1  # 820 px > 150 → High (was Moderate under the old 5 % rule)
     assert risk_stats(mask) == {"landslide_pixels": 820, "landslide_area_m2": 82000,
-                                "landslide_pct": 5.0, "risk_level": "Moderate", "risk_color": "#F39C12"}
+                                "landslide_pct": 5.0, "risk_level": "High", "risk_color": "#E74C3C"}
+    assert risk_stats(mask, "Metro Manila")["risk_level"] == "Low"
